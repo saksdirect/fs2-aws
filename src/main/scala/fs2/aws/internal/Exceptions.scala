@@ -3,10 +3,10 @@ package aws
 package internal
 
 object Exceptions {
-  case class KinesisCheckpointException(msg: String) extends Exception
+  case class KinesisCheckpointException(message: String) extends Exception(message)
 
-  sealed trait KinesisSettingsException         extends Exception
-  case class BufferSizeException(msg: String)   extends KinesisSettingsException
-  case class MaxBatchWaitException(msg: String) extends KinesisSettingsException
-  case class MaxBatchSizeException(msg: String) extends KinesisSettingsException
+  sealed class KinesisSettingsException(message: String) extends Exception(message)
+  case class BufferSizeException(message: String)        extends KinesisSettingsException(message)
+  case class MaxBatchWaitException(message: String)      extends KinesisSettingsException(message)
+  case class MaxBatchSizeException(message: String)      extends KinesisSettingsException(message)
 }
