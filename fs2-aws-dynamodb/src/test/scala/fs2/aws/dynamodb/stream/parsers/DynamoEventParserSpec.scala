@@ -1,4 +1,4 @@
-package fs2.aws.dynamodb.parsers
+package fs2.aws.dynamodb.stream.parsers
 
 import java.util
 

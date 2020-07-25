@@ -1,5 +1,4 @@
-package fs2
-package aws
+package fs2.aws.dynamodb.stream
 
 import java.util.Date
 import java.util.concurrent.Semaphore

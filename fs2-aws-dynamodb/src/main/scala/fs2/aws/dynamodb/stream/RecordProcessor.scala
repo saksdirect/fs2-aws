@@ -1,4 +1,4 @@
-package fs2.aws.dynamodb
+package fs2.aws.dynamodb.stream
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter
 import com.amazonaws.services.kinesis.clientlibrary.interfaces._
