@@ -1,5 +1,6 @@
 package fs2.aws.kinesis
 
+import cats.effect.concurrent.Deferred
 import cats.effect.{ Blocker, ConcurrentEffect, ContextShift, IO, Sync, Timer }
 import cats.implicits._
 import fs2.aws.core
@@ -237,9 +238,15 @@ object consumer {
     for {
       buffer    <- Stream.eval(Queue.bounded[F, Chunk[CommittableRecord]](streamConfig.bufferSize))
       scheduler <- instantiateWorker(buffer)
-      stream <- buffer.dequeue concurrently Stream.eval(
-                 Blocker[F].use(blocker => blocker.delay(scheduler.run()))
-               ) onFinalize Sync[F].delay(scheduler.shutdown())
+      switch    <- Stream.eval(Deferred[F, Unit])
+      enqueue = Stream
+        .eval(
+          Blocker[F].use(blocker => blocker.delay(scheduler.run()))
+        )
+        .onFinalize(switch.complete(()))
+      dequeue = buffer.dequeue
+        .interruptWhen(switch.get.attempt)
+      stream <- dequeue.concurrently(enqueue).onFinalize(Sync[F].delay(scheduler.shutdown()))
     } yield stream
   }
 

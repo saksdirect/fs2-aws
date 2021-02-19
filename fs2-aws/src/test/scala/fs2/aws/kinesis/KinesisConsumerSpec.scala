@@ -2,16 +2,13 @@ package fs2
 package aws
 package kinesis
 
-import java.nio.ByteBuffer
-import java.time.Instant
-import java.util.concurrent.Semaphore
-
 import cats.effect.{ ContextShift, IO, Timer }
 import cats.implicits._
 import fs2.aws.kinesis.consumer.{ readFromKinesisStream, _ }
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time._
@@ -23,16 +20,19 @@ import software.amazon.kinesis.processor.{ ShardRecordProcessor, ShardRecordProc
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
 
+import java.nio.ByteBuffer
+import java.time.Instant
+import java.util.concurrent.Semaphore
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-import org.mockito.ArgumentMatchers.any
 
 class KinesisConsumerSpec
     extends AnyFlatSpec
     with Matchers
     with BeforeAndAfterEach
-    with Eventually {
+    with Eventually
+    with ScalaFutures {
 
   implicit val ec: ExecutionContext             = ExecutionContext.global
   implicit val timer: Timer[IO]                 = IO.timer(ec)
@@ -60,6 +60,11 @@ class KinesisConsumerSpec
       .extendedSequenceNumber()
     commitableRecord.shardId            shouldBe initializationInput.shardId()
     commitableRecord.millisBehindLatest shouldBe recordsInput.build().millisBehindLatest()
+  }
+
+  it should "complete if the scheduler shuts itself down (e.g. if it fails to initialise)" in new WorkerContext
+    with TestData {
+    stream.compile.drain.unsafeToFuture().futureValue
   }
 
   it should "Shutdown the worker if the stream is drained and has not failed" in new WorkerContext
@@ -360,7 +365,20 @@ class KinesisConsumerSpec
 
     protected val mockScheduler: Scheduler = mock(classOf[Scheduler])
 
-    doAnswer(_ => println("running kinesis scheduler")).when(mockScheduler).run()
+    doAnswer { _ =>
+      println("running kinesis scheduler")
+      // scheduler.run() is a long-running process, so simulate that.
+      // There's no significance in the value of 1000; it just needs to be
+      // long enough for any records that have been enqueued to be dequeued.
+      try {
+        Thread.sleep(1000)
+      } catch {
+        // This will be thrown when the thread is interrupted, either the next time
+        // the stream is materialised, or when the test finishes.
+        case _: InterruptedException =>
+      }
+      println("scheduler shutting down")
+    }.when(mockScheduler).run()
 
     doAnswer(_ => ()).when(mockScheduler).shutdown()
 
