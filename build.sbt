@@ -137,11 +137,12 @@ lazy val `fs2-aws-s3` = (project in file("fs2-aws-s3"))
   .settings(
     name := "fs2-aws-s3",
     libraryDependencies ++= Seq(
-      "co.fs2"                 %% "fs2-core" % V.Fs2,
-      "co.fs2"                 %% "fs2-io"   % V.Fs2,
-      "eu.timepit"             %% "refined"  % V.Refined,
-      "software.amazon.awssdk" % "s3"        % V.AwsSdk,
-      "org.scalameta"          %% "munit"    % V.Munit % Test
+      "co.fs2"                 %% "fs2-core"             % V.Fs2,
+      "co.fs2"                 %% "fs2-io"               % V.Fs2,
+      "co.fs2"                 %% "fs2-reactive-streams" % V.Fs2,
+      "eu.timepit"             %% "refined"              % V.Refined,
+      "software.amazon.awssdk" % "s3"                    % V.AwsSdk,
+      "org.scalameta"          %% "munit"                % V.Munit % Test
     ),
     testFrameworks        += new TestFramework("munit.Framework"),
     coverageMinimum       := 0,

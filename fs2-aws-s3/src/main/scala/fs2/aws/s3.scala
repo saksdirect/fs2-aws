@@ -1,6 +1,5 @@
 package fs2.aws
 
-import java.net.URI
 import java.nio.ByteBuffer
 import cats.effect._
 import cats.implicits._
@@ -13,10 +12,7 @@ import eu.timepit.refined.numeric.Greater
 import eu.timepit.refined.types.string.NonEmptyString
 import fs2.{ Chunk, Pipe, Pull }
 import io.laserdisc.pure.s3.tagless.S3AsyncClientOp
-import software.amazon.awssdk.core.ResponseInputStream
-import software.amazon.awssdk.core.async.{ AsyncRequestBody, AsyncResponseTransformer }
-import software.amazon.awssdk.core.sync.{ RequestBody, ResponseTransformer }
-import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model._
 
 import scala.jdk.CollectionConverters._
@@ -67,7 +63,10 @@ object s3 {
       * }
       * }}}
       */
-    def create[F[_]: Concurrent: ContextShift](s3: S3AsyncClientOp[F], blocker: Blocker): F[S3[F]] =
+    def create[F[_]: ConcurrentEffect: ContextShift](
+      s3: S3AsyncClientOp[F],
+      blocker: Blocker
+    ): F[S3[F]] =
       new S3[F] {
 
         /**
@@ -191,19 +190,25 @@ object s3 {
           *
           * For big files, consider using [[readFileMultipart]] instead.
           */
-        def readFile(bucket: BucketName, key: FileKey): fs2.Stream[F, Byte] =
+        def readFile(
+          bucket: BucketName,
+          key: FileKey
+        ): fs2.Stream[F, Byte] =
           fs2.Stream
             .eval(
               s3.getObject(
-                GetObjectRequest
-                  .builder()
-                  .bucket(bucket.value)
-                  .key(key.value)
-                  .build(),
-                AsyncResponseTransformer.toBytes[GetObjectResponse]
-              )
+                  GetObjectRequest
+                    .builder()
+                    .bucket(bucket.value)
+                    .key(key.value)
+                    .build(),
+                  Fs2StreamAsyncResponseTransformer[F, GetObjectResponse]
+                )
+                .map {
+                  case (response, stream) => stream
+                }
             )
-            .flatMap(r => fs2.Stream.chunk(Chunk.bytes(r.asByteArray)))
+            .flatten
 
         /**
           * Reads a file in multiple parts of the specifed @partSize per request. Suitable for big files.
@@ -219,41 +224,43 @@ object s3 {
           partSize: PartSizeMB
         ): fs2.Stream[F, Byte] = {
           val chunkSizeBytes = partSize.value * 1000000
+          val ContentRangeRE = """bytes (\d+)-(\d+)/(\d+)""".r
 
           // Range must be in the form "bytes=0-500" -> https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35
           def go(offset: Long): Pull[F, Byte, Unit] =
-            fs2.Stream
-              .eval {
-                s3.getObject(
+            Pull.eval {
+              s3.getObject(
                   GetObjectRequest
                     .builder()
-                    .range(s"bytes=$offset-${offset + chunkSizeBytes}")
+                    .range(s"bytes=$offset-${offset + chunkSizeBytes - 1}")
                     .bucket(bucket.value)
                     .key(key.value)
                     .build(),
-                  AsyncResponseTransformer.toBytes[GetObjectResponse]
+                  Fs2StreamAsyncResponseTransformer[F, GetObjectResponse]
                 )
-              }
-              .pull
-              .last
-              .flatMap {
-                case Some(resp) =>
-                  Pull.eval {
-                    blocker.delay {
-                      val bs  = resp.asByteArray()
-                      val len = bs.length
-                      if (len < 0) None else Some(Chunk.bytes(bs, 0, len))
-                    }
-                  }
-                case None =>
-                  Pull.eval(none.pure[F])
-              }
-              .flatMap {
-                case Some(o) =>
-                  if (o.size < chunkSizeBytes) Pull.output(o)
-                  else Pull.output(o) >> go(offset + o.size)
-                case None => Pull.done
-              }
+                .map {
+                  case (response, stream) =>
+                    stream.chunks.pull.last
+                      .flatMap {
+                        case Some(o) =>
+                          response.contentRange() match {
+                            case ContentRangeRE(_, rangeEndStr, sizeStr) =>
+                              // ContentRange=bytes 65-95/96 means multipart download is completed
+                              val rangeEnd = rangeEndStr.toLong
+                              val size     = sizeStr.toLong
+                              if (rangeEnd < size - 1) Pull.output(o) >> go(rangeEnd + 1)
+                              else Pull.output(o)
+                            case invalidContentRange =>
+                              Pull.eval(
+                                new RuntimeException(
+                                  s"Invalid response 'ContentRange=$invalidContentRange'. Expected 'ContentRange=$ContentRangeRE'"
+                                ).raiseError[F, Nothing]
+                              )
+                          }
+                        case None => Pull.done
+                      }
+                }
+            }.flatten
 
           go(0).stream
         }
