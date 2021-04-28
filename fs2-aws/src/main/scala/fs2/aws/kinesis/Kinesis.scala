@@ -83,7 +83,7 @@ object Kinesis {
         Stream.bracket {
           schedulerFactory(() =>
             new ChunkedRecordProcessor(records =>
-              ConcurrentEffect[F].runAsync(queue.enqueue1(records))(_ => IO.unit).unsafeRunSync()
+              ConcurrentEffect[F].toIO(queue.enqueue1(records)).unsafeRunSync()
             )
           ).flatTap(s => Concurrent[F].start(blocker.delay(s.run()).flatTap(_ => signal.set(true))))
         }(s => blocker.delay(s.shutdown()))
