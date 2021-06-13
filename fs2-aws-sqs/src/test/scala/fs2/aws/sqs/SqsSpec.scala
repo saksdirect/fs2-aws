@@ -1,6 +1,6 @@
 package sqs
 
-import cats.effect.{ Blocker, ContextShift, IO, Resource, Timer }
+import cats.effect.{ ContextShift, IO, Resource, Timer }
 import fs2.aws.sqs.SQS
 import io.laserdisc.pure.sqs.tagless.{ Interpreter, SqsAsyncClientOp }
 import org.scalatest.BeforeAndAfterAll
@@ -24,7 +24,6 @@ class SqsSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
     if ("fail" == text) Left(new Exception("failure"))
     else Right(text.toInt)
   }
-  val blocker                                           = Blocker.liftExecutionContext(ec)
   val sqsOpResource: Resource[IO, SqsAsyncClientOp[IO]] = mkSQSClient(4566)
   var queueUrl: String                                  = _
 
@@ -104,7 +103,7 @@ class SqsSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   def mkSQSClient(sqsPort: Int) = {
     val credentials =
       AwsBasicCredentials.create("accesskey", "secretkey")
-    Interpreter[IO](blocker).SqsAsyncClientOpResource(
+    Interpreter[IO].SqsAsyncClientOpResource(
       SqsAsyncClient
         .builder()
         .credentialsProvider(StaticCredentialsProvider.create(credentials))

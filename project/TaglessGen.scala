@@ -1,13 +1,10 @@
 import sbt._
-import Keys._
+import sbt.Keys._
 
 import java.lang.reflect._
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import scala.reflect.ClassTag
-import Predef._
-import scala.collection.immutable
-import scala.util.Try
 
 object TaglessGen {
 
@@ -339,9 +336,13 @@ class TaglessGen(
       |// Library imports
       |import cats.data.Kleisli
       |import cats.effect.{ Async, Blocker, ContextShift,  Resource }
-      |import java.util.concurrent.CompletionException
-      |import scala.concurrent.ExecutionContext
+      |${managed
+      .map(_.getSimpleName)
+      .map(oname => s"import software.amazon.awssdk.services.$awsService.${oname}Builder")
+      .mkString("\n")}
       |import software.amazon.awssdk.services.$awsService.model._
+      |
+      |import java.util.concurrent.CompletionException
       |
       |// Types referenced
       |${managed.map(ClassTag(_)).flatMap(imports(_)).distinct.sorted.mkString("\n")}
@@ -349,6 +350,7 @@ class TaglessGen(
       |
       |object Interpreter {
       |
+      |  @deprecated("Use Interpreter[M]. blocker is not needed anymore", "3.2.0")
       |  def apply[M[_]](b: Blocker)(
       |    implicit am: Async[M],
       |             cs: ContextShift[M]
@@ -356,7 +358,15 @@ class TaglessGen(
       |    new Interpreter[M] {
       |      val asyncM = am
       |      val contextShiftM = cs
-      |      val blocker = b
+      |    }
+      |    
+      |  def apply[M[_]](
+      |    implicit am: Async[M],
+      |             cs: ContextShift[M]
+      |  ): Interpreter[M] =
+      |    new Interpreter[M] {
+      |      val asyncM = am
+      |      val contextShiftM = cs
       |    }
       |
       |}
@@ -368,54 +378,32 @@ class TaglessGen(
       |
       |  // to support shifting blocking operations to another pool.
       |  val contextShiftM: ContextShift[M]
-      |  val blocker: Blocker
       |
       | ${managed.map(interpreterDef).mkString("\n  ")}
       |  // Some methods are common to all interpreters and can be overridden to change behavior globally.
       | 
-      |  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli { a =>
-      |   blocker.blockOn[M, A](try {
-      |    asyncM.delay(f(a))
-      |     } catch {
-      |       case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-      |     })(contextShiftM)
-      |   }
-      |  def primitive1[J, A](f: => A): M[A] =
-      |   blocker.blockOn[M, A](try {
-      |     asyncM.delay(f)
-      |   } catch {
-      |     case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-      |   })(contextShiftM)
+      |  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli(a => primitive1(f(a)))
       |
-      |   
+      |  def primitive1[J, A](f: =>A): M[A] = asyncM.delay(f)
       |
-      |  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli { a =>
-      |   asyncM.async { cb =>
-      |    fut(a).handle[Unit] { (a, x) =>
-      |     if (a == null)
-      |       x match {
-      |         case t: CompletionException => cb(Left(t.getCause))
-      |         case t                      => cb(Left(t))
-      |       }
-      |     else
-      |       cb(Right(a))
-      |    }
-      |     ()
-      |  }
-      | }
-      | def eff1[J, A](fut:  => CompletableFuture[A]): M[A] = 
-      |   asyncM.async { cb =>
-      |     fut.handle[Unit] { (a, x) =>
-      |       if (a == null)
-      |         x match {
-      |           case t: CompletionException => cb(Left(t.getCause))
-      |           case t                      => cb(Left(t))
-      |         }
-      |       else
-      |         cb(Right(a))
-      |     }
-      |     ()
-      |   }
+      |  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli(a => eff1(fut(a)))
+      |
+      |  def eff1[J, A](fut: =>CompletableFuture[A]): M[A] =
+      |    asyncM.guarantee(
+      |      asyncM
+      |        .async[A] { cb =>
+      |          fut.handle[Unit] { (a, x) =>
+      |            if (a == null)
+      |              x match {
+      |                case t: CompletionException => cb(Left(t.getCause))
+      |                case t                      => cb(Left(t))
+      |              }
+      |            else
+      |              cb(Right(a))
+      |          }
+      |          ()
+      |        }
+      |    )(contextShiftM.shift)
       |
       |
       |  // Interpreters

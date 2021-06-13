@@ -1,5 +1,5 @@
 import cats.data.Kleisli
-import cats.effect.{ Blocker, ExitCode, IO, IOApp, Resource, Sync, Timer }
+import cats.effect.{ ExitCode, IO, IOApp, Resource, Sync, Timer }
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import io.laserdisc.pure.sns.tagless.{ SnsAsyncClientOp, Interpreter => SNSInterpreter }
@@ -24,20 +24,18 @@ case class Environment(sqs: SqsAsyncClient, sns: SnsAsyncClient)
 object PureAWSKleisli extends IOApp {
   override def run(args: List[String]): IO[ExitCode] =
     //Kleisli example
-    resourcesK.use {
-      case (blocker, e) =>
-        program[Kleisli[IO, Environment, *]](
-          SQSInterpreter[IO](blocker).SqsAsyncClientInterpreter.lens[Environment](_.sqs),
-          SNSInterpreter[IO](blocker).SnsAsyncClientInterpreter.lens[Environment](_.sns)
-        ).run(e)
+    resourcesK.use { e =>
+      program[Kleisli[IO, Environment, *]](
+        SQSInterpreter[IO].SqsAsyncClientInterpreter.lens[Environment](_.sqs),
+        SNSInterpreter[IO].SnsAsyncClientInterpreter.lens[Environment](_.sns)
+      ).run(e)
     } >> //TF example
       resourcesF.use { case (sqs, sns) => program[IO](sqs, sns) }
 
-  def resourcesK: Resource[IO, (Blocker, Environment)] =
+  def resourcesK: Resource[IO, Environment] = {
+    val credentials = AwsBasicCredentials.create("accesskey", "secretkey")
+    val port        = 4566
     for {
-      blocker     <- Blocker[IO]
-      credentials = AwsBasicCredentials.create("accesskey", "secretkey")
-      port        = 4566
       sns <- Resource.fromAutoCloseable(
               IO.delay(
                 SnsAsyncClient
@@ -58,21 +56,22 @@ object PureAWSKleisli extends IOApp {
                   .build()
               )
             )
-    } yield blocker -> Environment(sqs, sns)
+    } yield Environment(sqs, sns)
+  }
 
-  def resourcesF: Resource[IO, (SqsAsyncClientOp[IO], SnsAsyncClientOp[IO])] =
+  def resourcesF: Resource[IO, (SqsAsyncClientOp[IO], SnsAsyncClientOp[IO])] = {
+    val credentials = AwsBasicCredentials.create("accesskey", "secretkey")
+    val port        = 4566
     for {
-      blocker     <- Blocker[IO]
-      credentials = AwsBasicCredentials.create("accesskey", "secretkey")
-      port        = 4566
-      sns <- SNSInterpreter[IO](blocker).SnsAsyncClientOpResource(
+
+      sns <- SNSInterpreter[IO].SnsAsyncClientOpResource(
               SnsAsyncClient
                 .builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .endpointOverride(URI.create(s"http://localhost:$port"))
                 .region(Region.US_EAST_1)
             )
-      sqs <- SQSInterpreter[IO](blocker).SqsAsyncClientOpResource(
+      sqs <- SQSInterpreter[IO].SqsAsyncClientOpResource(
               SqsAsyncClient
                 .builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
@@ -80,6 +79,7 @@ object PureAWSKleisli extends IOApp {
                 .region(Region.US_EAST_1)
             )
     } yield sqs -> sns
+  }
 
   //Program with SQS and SNS algebras
   def program[F[_]: Sync: Timer](

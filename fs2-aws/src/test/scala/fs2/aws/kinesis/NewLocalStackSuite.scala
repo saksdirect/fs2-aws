@@ -212,10 +212,10 @@ class NewLocalStackSuite extends AnyFlatSpec with Matchers with ScalaFutures {
   ) =
     for {
       b                  <- Blocker[IO]
-      i                  = KinesisInterpreter[IO](b)
+      i                  = KinesisInterpreter[IO]
       k                  <- i.KinesisAsyncClientResource(kac)
-      d                  <- DynamoDbInterpreter[IO](b).DynamoDbAsyncClientResource(dac)
-      c                  <- CloudwatchInterpreter[IO](b).CloudWatchAsyncClientResource(cac)
+      d                  <- DynamoDbInterpreter[IO].DynamoDbAsyncClientResource(dac)
+      c                  <- CloudwatchInterpreter[IO].CloudWatchAsyncClientResource(cac)
       kinesisInterpreter = i.create(k)
       kAlgebra           = Kinesis.create[IO](k, d, c, b)
     } yield kinesisInterpreter -> kAlgebra

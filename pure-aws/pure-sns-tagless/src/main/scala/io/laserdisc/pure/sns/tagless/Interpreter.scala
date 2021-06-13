@@ -49,6 +49,7 @@ import java.util.concurrent.CompletableFuture
 
 object Interpreter {
 
+  @deprecated("Use Interpreter[M]. blocker is not needed anymore", "3.2.0")
   def apply[M[_]](b: Blocker)(
     implicit am: Async[M],
     cs: ContextShift[M]
@@ -56,7 +57,15 @@ object Interpreter {
     new Interpreter[M] {
       val asyncM        = am
       val contextShiftM = cs
-      val blocker       = b
+    }
+
+  def apply[M[_]](
+    implicit am: Async[M],
+    cs: ContextShift[M]
+  ): Interpreter[M] =
+    new Interpreter[M] {
+      val asyncM        = am
+      val contextShiftM = cs
     }
 
 }
@@ -68,52 +77,32 @@ trait Interpreter[M[_]] { outer =>
 
   // to support shifting blocking operations to another pool.
   val contextShiftM: ContextShift[M]
-  val blocker: Blocker
 
   lazy val SnsAsyncClientInterpreter: SnsAsyncClientInterpreter = new SnsAsyncClientInterpreter {}
   // Some methods are common to all interpreters and can be overridden to change behavior globally.
 
-  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli { a =>
-    blocker.blockOn[M, A](try {
-      asyncM.delay(f(a))
-    } catch {
-      case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-    })(contextShiftM)
-  }
-  def primitive1[J, A](f: =>A): M[A] =
-    blocker.blockOn[M, A](try {
-      asyncM.delay(f)
-    } catch {
-      case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-    })(contextShiftM)
+  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli(a => primitive1(f(a)))
 
-  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli { a =>
-    asyncM.async { cb =>
-      fut(a).handle[Unit] { (a, x) =>
-        if (a == null)
-          x match {
-            case t: CompletionException => cb(Left(t.getCause))
-            case t                      => cb(Left(t))
-          }
-        else
-          cb(Right(a))
-      }
-      ()
-    }
-  }
+  def primitive1[J, A](f: =>A): M[A] = asyncM.delay(f)
+
+  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli(a => eff1(fut(a)))
+
   def eff1[J, A](fut: =>CompletableFuture[A]): M[A] =
-    asyncM.async { cb =>
-      fut.handle[Unit] { (a, x) =>
-        if (a == null)
-          x match {
-            case t: CompletionException => cb(Left(t.getCause))
-            case t                      => cb(Left(t))
+    asyncM.guarantee(
+      asyncM
+        .async[A] { cb =>
+          fut.handle[Unit] { (a, x) =>
+            if (a == null)
+              x match {
+                case t: CompletionException => cb(Left(t.getCause))
+                case t                      => cb(Left(t))
+              }
+            else
+              cb(Right(a))
           }
-        else
-          cb(Right(a))
-      }
-      ()
-    }
+          ()
+        }
+    )(contextShiftM.shift)
 
   // Interpreters
   trait SnsAsyncClientInterpreter extends SnsAsyncClientOp[Kleisli[M, SnsAsyncClient, *]] {

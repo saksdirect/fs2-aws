@@ -19,7 +19,7 @@ class S3Suite extends IOSuite {
       .create("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
 
   val s3R: Resource[IO, S3AsyncClientOp[IO]] =
-    Interpreter[IO](blocker).S3AsyncClientOpResource(
+    Interpreter[IO].S3AsyncClientOpResource(
       S3AsyncClient
         .builder()
         .credentialsProvider(StaticCredentialsProvider.create(credentials))

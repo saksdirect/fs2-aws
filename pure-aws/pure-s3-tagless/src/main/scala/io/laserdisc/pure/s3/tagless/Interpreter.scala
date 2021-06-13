@@ -101,7 +101,8 @@ import software.amazon.awssdk.services.s3.model.{
   PutPublicAccessBlockRequest,
   RestoreObjectRequest,
   UploadPartCopyRequest,
-  UploadPartRequest
+  UploadPartRequest,
+  WriteGetObjectResponseRequest
 }
 
 import java.nio.file.Path
@@ -109,6 +110,7 @@ import java.util.concurrent.CompletableFuture
 
 object Interpreter {
 
+  @deprecated("Use Interpreter[M]. blocker is not needed anymore", "3.2.0")
   def apply[M[_]](b: Blocker)(
     implicit am: Async[M],
     cs: ContextShift[M]
@@ -116,7 +118,15 @@ object Interpreter {
     new Interpreter[M] {
       val asyncM        = am
       val contextShiftM = cs
-      val blocker       = b
+    }
+
+  def apply[M[_]](
+    implicit am: Async[M],
+    cs: ContextShift[M]
+  ): Interpreter[M] =
+    new Interpreter[M] {
+      val asyncM        = am
+      val contextShiftM = cs
     }
 
 }
@@ -128,52 +138,32 @@ trait Interpreter[M[_]] { outer =>
 
   // to support shifting blocking operations to another pool.
   val contextShiftM: ContextShift[M]
-  val blocker: Blocker
 
   lazy val S3AsyncClientInterpreter: S3AsyncClientInterpreter = new S3AsyncClientInterpreter {}
   // Some methods are common to all interpreters and can be overridden to change behavior globally.
 
-  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli { a =>
-    blocker.blockOn[M, A](try {
-      asyncM.delay(f(a))
-    } catch {
-      case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-    })(contextShiftM)
-  }
-  def primitive1[J, A](f: =>A): M[A] =
-    blocker.blockOn[M, A](try {
-      asyncM.delay(f)
-    } catch {
-      case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-    })(contextShiftM)
+  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli(a => primitive1(f(a)))
 
-  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli { a =>
-    asyncM.async { cb =>
-      fut(a).handle[Unit] { (a, x) =>
-        if (a == null)
-          x match {
-            case t: CompletionException => cb(Left(t.getCause))
-            case t                      => cb(Left(t))
-          }
-        else
-          cb(Right(a))
-      }
-      ()
-    }
-  }
+  def primitive1[J, A](f: =>A): M[A] = asyncM.delay(f)
+
+  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli(a => eff1(fut(a)))
+
   def eff1[J, A](fut: =>CompletableFuture[A]): M[A] =
-    asyncM.async { cb =>
-      fut.handle[Unit] { (a, x) =>
-        if (a == null)
-          x match {
-            case t: CompletionException => cb(Left(t.getCause))
-            case t                      => cb(Left(t))
+    asyncM.guarantee(
+      asyncM
+        .async[A] { cb =>
+          fut.handle[Unit] { (a, x) =>
+            if (a == null)
+              x match {
+                case t: CompletionException => cb(Left(t.getCause))
+                case t                      => cb(Left(t))
+              }
+            else
+              cb(Right(a))
           }
-        else
-          cb(Right(a))
-      }
-      ()
-    }
+          ()
+        }
+    )(contextShiftM.shift)
 
   // Interpreters
   trait S3AsyncClientInterpreter extends S3AsyncClientOp[Kleisli[M, S3AsyncClient, *]] {
@@ -338,6 +328,10 @@ trait Interpreter[M[_]] { outer =>
     override def uploadPartCopy(a: UploadPartCopyRequest)              = eff(_.uploadPartCopy(a))
     override def utilities                                             = primitive(_.utilities)
     override def waiter                                                = primitive(_.waiter)
+    override def writeGetObjectResponse(a: WriteGetObjectResponseRequest, b: AsyncRequestBody) =
+      eff(_.writeGetObjectResponse(a, b))
+    override def writeGetObjectResponse(a: WriteGetObjectResponseRequest, b: Path) =
+      eff(_.writeGetObjectResponse(a, b))
     def lens[E](f: E => S3AsyncClient): S3AsyncClientOp[Kleisli[M, E, *]] =
       new S3AsyncClientOp[Kleisli[M, E, *]] {
         override def abortMultipartUpload(a: AbortMultipartUploadRequest) =
@@ -542,6 +536,10 @@ trait Interpreter[M[_]] { outer =>
           Kleisli(e => eff1(f(e).uploadPartCopy(a)))
         override def utilities = Kleisli(e => primitive1(f(e).utilities))
         override def waiter    = Kleisli(e => primitive1(f(e).waiter))
+        override def writeGetObjectResponse(a: WriteGetObjectResponseRequest, b: AsyncRequestBody) =
+          Kleisli(e => eff1(f(e).writeGetObjectResponse(a, b)))
+        override def writeGetObjectResponse(a: WriteGetObjectResponseRequest, b: Path) =
+          Kleisli(e => eff1(f(e).writeGetObjectResponse(a, b)))
       }
   }
 
@@ -725,6 +723,10 @@ trait Interpreter[M[_]] { outer =>
     override def uploadPartCopy(a: UploadPartCopyRequest)  = eff1(client.uploadPartCopy(a))
     override def utilities                                 = primitive1(client.utilities)
     override def waiter                                    = primitive1(client.waiter)
+    override def writeGetObjectResponse(a: WriteGetObjectResponseRequest, b: AsyncRequestBody) =
+      eff1(client.writeGetObjectResponse(a, b))
+    override def writeGetObjectResponse(a: WriteGetObjectResponseRequest, b: Path) =
+      eff1(client.writeGetObjectResponse(a, b))
 
   }
 

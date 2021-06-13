@@ -36,7 +36,13 @@ import software.amazon.awssdk.services.sns.model.{
   UntagResourceRequest,
   _
 }
-import software.amazon.awssdk.services.sns.paginators._
+import software.amazon.awssdk.services.sns.paginators.{
+  ListEndpointsByPlatformApplicationPublisher,
+  ListPlatformApplicationsPublisher,
+  ListSubscriptionsByTopicPublisher,
+  ListSubscriptionsPublisher,
+  ListTopicsPublisher
+}
 
 trait SnsAsyncClientOp[F[_]] {
   // SnsAsyncClient

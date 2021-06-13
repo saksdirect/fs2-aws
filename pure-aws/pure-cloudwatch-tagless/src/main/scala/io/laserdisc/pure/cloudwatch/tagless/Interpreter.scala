@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.cloudwatch.model.{
   DeleteAnomalyDetectorRequest,
   DeleteDashboardsRequest,
   DeleteInsightRulesRequest,
+  DeleteMetricStreamRequest,
   DescribeAlarmHistoryRequest,
   DescribeAlarmsForMetricRequest,
   DescribeAlarmsRequest,
@@ -27,8 +28,10 @@ import software.amazon.awssdk.services.cloudwatch.model.{
   GetInsightRuleReportRequest,
   GetMetricDataRequest,
   GetMetricStatisticsRequest,
+  GetMetricStreamRequest,
   GetMetricWidgetImageRequest,
   ListDashboardsRequest,
+  ListMetricStreamsRequest,
   ListMetricsRequest,
   ListTagsForResourceRequest,
   PutAnomalyDetectorRequest,
@@ -37,7 +40,10 @@ import software.amazon.awssdk.services.cloudwatch.model.{
   PutInsightRuleRequest,
   PutMetricAlarmRequest,
   PutMetricDataRequest,
+  PutMetricStreamRequest,
   SetAlarmStateRequest,
+  StartMetricStreamsRequest,
+  StopMetricStreamsRequest,
   TagResourceRequest,
   UntagResourceRequest
 }
@@ -46,6 +52,7 @@ import java.util.concurrent.CompletableFuture
 
 object Interpreter {
 
+  @deprecated("Use Interpreter[M]. blocker is not needed anymore", "3.2.0")
   def apply[M[_]](b: Blocker)(
     implicit am: Async[M],
     cs: ContextShift[M]
@@ -53,7 +60,15 @@ object Interpreter {
     new Interpreter[M] {
       val asyncM        = am
       val contextShiftM = cs
-      val blocker       = b
+    }
+
+  def apply[M[_]](
+    implicit am: Async[M],
+    cs: ContextShift[M]
+  ): Interpreter[M] =
+    new Interpreter[M] {
+      val asyncM        = am
+      val contextShiftM = cs
     }
 
 }
@@ -65,53 +80,33 @@ trait Interpreter[M[_]] { outer =>
 
   // to support shifting blocking operations to another pool.
   val contextShiftM: ContextShift[M]
-  val blocker: Blocker
 
   lazy val CloudWatchAsyncClientInterpreter: CloudWatchAsyncClientInterpreter =
     new CloudWatchAsyncClientInterpreter {}
   // Some methods are common to all interpreters and can be overridden to change behavior globally.
 
-  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli { a =>
-    blocker.blockOn[M, A](try {
-      asyncM.delay(f(a))
-    } catch {
-      case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-    })(contextShiftM)
-  }
-  def primitive1[J, A](f: =>A): M[A] =
-    blocker.blockOn[M, A](try {
-      asyncM.delay(f)
-    } catch {
-      case scala.util.control.NonFatal(e) => asyncM.raiseError(e)
-    })(contextShiftM)
+  def primitive[J, A](f: J => A): Kleisli[M, J, A] = Kleisli(a => primitive1(f(a)))
 
-  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli { a =>
-    asyncM.async { cb =>
-      fut(a).handle[Unit] { (a, x) =>
-        if (a == null)
-          x match {
-            case t: CompletionException => cb(Left(t.getCause))
-            case t                      => cb(Left(t))
-          }
-        else
-          cb(Right(a))
-      }
-      ()
-    }
-  }
+  def primitive1[J, A](f: =>A): M[A] = asyncM.delay(f)
+
+  def eff[J, A](fut: J => CompletableFuture[A]): Kleisli[M, J, A] = Kleisli(a => eff1(fut(a)))
+
   def eff1[J, A](fut: =>CompletableFuture[A]): M[A] =
-    asyncM.async { cb =>
-      fut.handle[Unit] { (a, x) =>
-        if (a == null)
-          x match {
-            case t: CompletionException => cb(Left(t.getCause))
-            case t                      => cb(Left(t))
+    asyncM.guarantee(
+      asyncM
+        .async[A] { cb =>
+          fut.handle[Unit] { (a, x) =>
+            if (a == null)
+              x match {
+                case t: CompletionException => cb(Left(t.getCause))
+                case t                      => cb(Left(t))
+              }
+            else
+              cb(Right(a))
           }
-        else
-          cb(Right(a))
-      }
-      ()
-    }
+          ()
+        }
+    )(contextShiftM.shift)
 
   // Interpreters
   trait CloudWatchAsyncClientInterpreter
@@ -124,6 +119,7 @@ trait Interpreter[M[_]] { outer =>
       eff(_.deleteAnomalyDetector(a))
     override def deleteDashboards(a: DeleteDashboardsRequest)     = eff(_.deleteDashboards(a))
     override def deleteInsightRules(a: DeleteInsightRulesRequest) = eff(_.deleteInsightRules(a))
+    override def deleteMetricStream(a: DeleteMetricStreamRequest) = eff(_.deleteMetricStream(a))
     override def describeAlarmHistory                             = eff(_.describeAlarmHistory)
     override def describeAlarmHistory(a: DescribeAlarmHistoryRequest) =
       eff(_.describeAlarmHistory(a))
@@ -154,6 +150,7 @@ trait Interpreter[M[_]] { outer =>
     override def getMetricDataPaginator(a: GetMetricDataRequest) =
       primitive(_.getMetricDataPaginator(a))
     override def getMetricStatistics(a: GetMetricStatisticsRequest) = eff(_.getMetricStatistics(a))
+    override def getMetricStream(a: GetMetricStreamRequest)         = eff(_.getMetricStream(a))
     override def getMetricWidgetImage(a: GetMetricWidgetImageRequest) =
       eff(_.getMetricWidgetImage(a))
     override def listDashboards                           = eff(_.listDashboards)
@@ -161,6 +158,9 @@ trait Interpreter[M[_]] { outer =>
     override def listDashboardsPaginator                  = primitive(_.listDashboardsPaginator)
     override def listDashboardsPaginator(a: ListDashboardsRequest) =
       primitive(_.listDashboardsPaginator(a))
+    override def listMetricStreams(a: ListMetricStreamsRequest) = eff(_.listMetricStreams(a))
+    override def listMetricStreamsPaginator(a: ListMetricStreamsRequest) =
+      primitive(_.listMetricStreamsPaginator(a))
     override def listMetrics                                        = eff(_.listMetrics)
     override def listMetrics(a: ListMetricsRequest)                 = eff(_.listMetrics(a))
     override def listMetricsPaginator                               = primitive(_.listMetricsPaginator)
@@ -172,8 +172,11 @@ trait Interpreter[M[_]] { outer =>
     override def putInsightRule(a: PutInsightRuleRequest)           = eff(_.putInsightRule(a))
     override def putMetricAlarm(a: PutMetricAlarmRequest)           = eff(_.putMetricAlarm(a))
     override def putMetricData(a: PutMetricDataRequest)             = eff(_.putMetricData(a))
+    override def putMetricStream(a: PutMetricStreamRequest)         = eff(_.putMetricStream(a))
     override def serviceName                                        = primitive(_.serviceName)
     override def setAlarmState(a: SetAlarmStateRequest)             = eff(_.setAlarmState(a))
+    override def startMetricStreams(a: StartMetricStreamsRequest)   = eff(_.startMetricStreams(a))
+    override def stopMetricStreams(a: StopMetricStreamsRequest)     = eff(_.stopMetricStreams(a))
     override def tagResource(a: TagResourceRequest)                 = eff(_.tagResource(a))
     override def untagResource(a: UntagResourceRequest)             = eff(_.untagResource(a))
     override def waiter                                             = primitive(_.waiter)
@@ -187,6 +190,8 @@ trait Interpreter[M[_]] { outer =>
           Kleisli(e => eff1(f(e).deleteDashboards(a)))
         override def deleteInsightRules(a: DeleteInsightRulesRequest) =
           Kleisli(e => eff1(f(e).deleteInsightRules(a)))
+        override def deleteMetricStream(a: DeleteMetricStreamRequest) =
+          Kleisli(e => eff1(f(e).deleteMetricStream(a)))
         override def describeAlarmHistory = Kleisli(e => eff1(f(e).describeAlarmHistory))
         override def describeAlarmHistory(a: DescribeAlarmHistoryRequest) =
           Kleisli(e => eff1(f(e).describeAlarmHistory(a)))
@@ -226,6 +231,8 @@ trait Interpreter[M[_]] { outer =>
           Kleisli(e => primitive1(f(e).getMetricDataPaginator(a)))
         override def getMetricStatistics(a: GetMetricStatisticsRequest) =
           Kleisli(e => eff1(f(e).getMetricStatistics(a)))
+        override def getMetricStream(a: GetMetricStreamRequest) =
+          Kleisli(e => eff1(f(e).getMetricStream(a)))
         override def getMetricWidgetImage(a: GetMetricWidgetImageRequest) =
           Kleisli(e => eff1(f(e).getMetricWidgetImage(a)))
         override def listDashboards = Kleisli(e => eff1(f(e).listDashboards))
@@ -235,6 +242,10 @@ trait Interpreter[M[_]] { outer =>
           Kleisli(e => primitive1(f(e).listDashboardsPaginator))
         override def listDashboardsPaginator(a: ListDashboardsRequest) =
           Kleisli(e => primitive1(f(e).listDashboardsPaginator(a)))
+        override def listMetricStreams(a: ListMetricStreamsRequest) =
+          Kleisli(e => eff1(f(e).listMetricStreams(a)))
+        override def listMetricStreamsPaginator(a: ListMetricStreamsRequest) =
+          Kleisli(e => primitive1(f(e).listMetricStreamsPaginator(a)))
         override def listMetrics                        = Kleisli(e => eff1(f(e).listMetrics))
         override def listMetrics(a: ListMetricsRequest) = Kleisli(e => eff1(f(e).listMetrics(a)))
         override def listMetricsPaginator               = Kleisli(e => primitive1(f(e).listMetricsPaginator))
@@ -253,9 +264,15 @@ trait Interpreter[M[_]] { outer =>
           Kleisli(e => eff1(f(e).putMetricAlarm(a)))
         override def putMetricData(a: PutMetricDataRequest) =
           Kleisli(e => eff1(f(e).putMetricData(a)))
+        override def putMetricStream(a: PutMetricStreamRequest) =
+          Kleisli(e => eff1(f(e).putMetricStream(a)))
         override def serviceName = Kleisli(e => primitive1(f(e).serviceName))
         override def setAlarmState(a: SetAlarmStateRequest) =
           Kleisli(e => eff1(f(e).setAlarmState(a)))
+        override def startMetricStreams(a: StartMetricStreamsRequest) =
+          Kleisli(e => eff1(f(e).startMetricStreams(a)))
+        override def stopMetricStreams(a: StopMetricStreamsRequest) =
+          Kleisli(e => eff1(f(e).stopMetricStreams(a)))
         override def tagResource(a: TagResourceRequest) = Kleisli(e => eff1(f(e).tagResource(a)))
         override def untagResource(a: UntagResourceRequest) =
           Kleisli(e => eff1(f(e).untagResource(a)))
@@ -279,6 +296,8 @@ trait Interpreter[M[_]] { outer =>
       override def deleteDashboards(a: DeleteDashboardsRequest) = eff1(client.deleteDashboards(a))
       override def deleteInsightRules(a: DeleteInsightRulesRequest) =
         eff1(client.deleteInsightRules(a))
+      override def deleteMetricStream(a: DeleteMetricStreamRequest) =
+        eff1(client.deleteMetricStream(a))
       override def describeAlarmHistory = eff1(client.describeAlarmHistory)
       override def describeAlarmHistory(a: DescribeAlarmHistoryRequest) =
         eff1(client.describeAlarmHistory(a))
@@ -314,6 +333,7 @@ trait Interpreter[M[_]] { outer =>
         primitive1(client.getMetricDataPaginator(a))
       override def getMetricStatistics(a: GetMetricStatisticsRequest) =
         eff1(client.getMetricStatistics(a))
+      override def getMetricStream(a: GetMetricStreamRequest) = eff1(client.getMetricStream(a))
       override def getMetricWidgetImage(a: GetMetricWidgetImageRequest) =
         eff1(client.getMetricWidgetImage(a))
       override def listDashboards                           = eff1(client.listDashboards)
@@ -321,6 +341,10 @@ trait Interpreter[M[_]] { outer =>
       override def listDashboardsPaginator                  = primitive1(client.listDashboardsPaginator)
       override def listDashboardsPaginator(a: ListDashboardsRequest) =
         primitive1(client.listDashboardsPaginator(a))
+      override def listMetricStreams(a: ListMetricStreamsRequest) =
+        eff1(client.listMetricStreams(a))
+      override def listMetricStreamsPaginator(a: ListMetricStreamsRequest) =
+        primitive1(client.listMetricStreamsPaginator(a))
       override def listMetrics                        = eff1(client.listMetrics)
       override def listMetrics(a: ListMetricsRequest) = eff1(client.listMetrics(a))
       override def listMetricsPaginator               = primitive1(client.listMetricsPaginator)
@@ -332,15 +356,20 @@ trait Interpreter[M[_]] { outer =>
         eff1(client.putAnomalyDetector(a))
       override def putCompositeAlarm(a: PutCompositeAlarmRequest) =
         eff1(client.putCompositeAlarm(a))
-      override def putDashboard(a: PutDashboardRequest)     = eff1(client.putDashboard(a))
-      override def putInsightRule(a: PutInsightRuleRequest) = eff1(client.putInsightRule(a))
-      override def putMetricAlarm(a: PutMetricAlarmRequest) = eff1(client.putMetricAlarm(a))
-      override def putMetricData(a: PutMetricDataRequest)   = eff1(client.putMetricData(a))
-      override def serviceName                              = primitive1(client.serviceName)
-      override def setAlarmState(a: SetAlarmStateRequest)   = eff1(client.setAlarmState(a))
-      override def tagResource(a: TagResourceRequest)       = eff1(client.tagResource(a))
-      override def untagResource(a: UntagResourceRequest)   = eff1(client.untagResource(a))
-      override def waiter                                   = primitive1(client.waiter)
+      override def putDashboard(a: PutDashboardRequest)       = eff1(client.putDashboard(a))
+      override def putInsightRule(a: PutInsightRuleRequest)   = eff1(client.putInsightRule(a))
+      override def putMetricAlarm(a: PutMetricAlarmRequest)   = eff1(client.putMetricAlarm(a))
+      override def putMetricData(a: PutMetricDataRequest)     = eff1(client.putMetricData(a))
+      override def putMetricStream(a: PutMetricStreamRequest) = eff1(client.putMetricStream(a))
+      override def serviceName                                = primitive1(client.serviceName)
+      override def setAlarmState(a: SetAlarmStateRequest)     = eff1(client.setAlarmState(a))
+      override def startMetricStreams(a: StartMetricStreamsRequest) =
+        eff1(client.startMetricStreams(a))
+      override def stopMetricStreams(a: StopMetricStreamsRequest) =
+        eff1(client.stopMetricStreams(a))
+      override def tagResource(a: TagResourceRequest)     = eff1(client.tagResource(a))
+      override def untagResource(a: UntagResourceRequest) = eff1(client.untagResource(a))
+      override def waiter                                 = primitive1(client.waiter)
 
     }
 

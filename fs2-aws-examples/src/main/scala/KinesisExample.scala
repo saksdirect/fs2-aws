@@ -52,10 +52,10 @@ object KinesisExample extends IOApp {
   ) =
     for {
       b                  <- Blocker[F]
-      i                  = KinesisInterpreter[F](b)
+      i                  = KinesisInterpreter[F]
       k                  <- i.KinesisAsyncClientResource(kac)
-      d                  <- DynamoDbInterpreter[F](b).DynamoDbAsyncClientResource(dac)
-      c                  <- CloudwatchInterpreter[F](b).CloudWatchAsyncClientResource(cac)
+      d                  <- DynamoDbInterpreter[F].DynamoDbAsyncClientResource(dac)
+      c                  <- CloudwatchInterpreter[F].CloudWatchAsyncClientResource(cac)
       kinesisInterpreter = i.create(k)
       _                  <- disposableStream(kinesisInterpreter, streamName)
     } yield Kinesis.create[F](k, d, c, b)

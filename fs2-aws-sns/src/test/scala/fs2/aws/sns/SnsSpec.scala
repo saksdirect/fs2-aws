@@ -1,6 +1,6 @@
 package fs2.aws.sns
 
-import cats.effect.{ Blocker, ContextShift, IO, Resource, Timer }
+import cats.effect.{ ContextShift, IO, Resource, Timer }
 import fs2.aws.sns.sns.SNS
 import io.laserdisc.pure.sns.tagless.{ Interpreter, SnsAsyncClientOp }
 import io.laserdisc.pure.sqs.tagless
@@ -32,7 +32,6 @@ class SnsSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   var topicArn: String = _
   var queueUrl: String = _
   val pattern: Regex   = new Regex("\"Message\": \"[0-9]\"")
-  val blocker          = Blocker.liftExecutionContext(ec)
 
   override def beforeAll(): Unit =
     awsClientsResource
@@ -126,7 +125,7 @@ class SnsSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   def mkSNSClient(snsPort: Int): Resource[IO, SnsAsyncClientOp[IO]] = {
     val credentials =
       AwsBasicCredentials.create("accesskey", "secretkey")
-    Interpreter[IO](blocker).SnsAsyncClientOpResource(
+    Interpreter[IO].SnsAsyncClientOpResource(
       SnsAsyncClient
         .builder()
         .credentialsProvider(StaticCredentialsProvider.create(credentials))
@@ -139,7 +138,7 @@ class SnsSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
     val credentials =
       AwsBasicCredentials.create("accesskey", "secretkey")
     tagless
-      .Interpreter[IO](blocker)
+      .Interpreter[IO]
       .SqsAsyncClientOpResource(
         SqsAsyncClient
           .builder()

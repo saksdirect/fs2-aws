@@ -360,6 +360,7 @@ class NewKinesisConsumerSpec
     val chunkedRecordProcessor                              = new ChunkedRecordProcessor(_ => ())
 
     doAnswer(_ => latch.await()).when(mockScheduler).run()
+    doAnswer(_ => ()).when(mockScheduler).shutdown()
 
     val builder = { x: ShardRecordProcessorFactory =>
       recordProcessorFactory = x

@@ -1,6 +1,6 @@
 package fs2.aws.dynamodb
 
-import cats.effect.{ Blocker, ContextShift, IO, Resource, Timer }
+import cats.effect.{ ContextShift, IO, Resource, Timer }
 import io.laserdisc.pure.dynamodb.tagless.{ DynamoDbAsyncClientOp, Interpreter => DDBInterpreter }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -70,12 +70,11 @@ class StreamScanSpec extends AnyWordSpec with Matchers with ScalaFutures {
         .futureValue
     }
   }
-  def resourcesF: Resource[IO, (String, DynamoDbAsyncClientOp[IO])] =
+  def resourcesF: Resource[IO, (String, DynamoDbAsyncClientOp[IO])] = {
+    val credentials = AwsBasicCredentials.create("accesskey", "secretkey")
+    val port        = 4566
     for {
-      blocker     <- Blocker[IO]
-      credentials = AwsBasicCredentials.create("accesskey", "secretkey")
-      port        = 4566
-      ddb <- DDBInterpreter[IO](blocker).DynamoDbAsyncClientOpResource(
+      ddb <- DDBInterpreter[IO].DynamoDbAsyncClientOpResource(
               DynamoDbAsyncClient
                 .builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
@@ -104,6 +103,7 @@ class StreamScanSpec extends AnyWordSpec with Matchers with ScalaFutures {
           )(_ => ddb.deleteTable(DeleteTableRequest.builder().tableName(tableName).build()).void)
 
     } yield tableName -> ddb
+  }
 
   def mkWriteRequest(name: String) =
     WriteRequest

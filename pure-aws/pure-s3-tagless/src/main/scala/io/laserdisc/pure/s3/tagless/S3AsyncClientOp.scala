@@ -93,6 +93,7 @@ import software.amazon.awssdk.services.s3.model.{
   RestoreObjectRequest,
   UploadPartCopyRequest,
   UploadPartRequest,
+  WriteGetObjectResponseRequest,
   _
 }
 import software.amazon.awssdk.services.s3.paginators.{
@@ -272,5 +273,13 @@ trait S3AsyncClientOp[F[_]] {
   def uploadPartCopy(a: UploadPartCopyRequest): F[UploadPartCopyResponse]
   def utilities: F[S3Utilities]
   def waiter: F[S3AsyncWaiter]
+  def writeGetObjectResponse(
+    a: WriteGetObjectResponseRequest,
+    b: AsyncRequestBody
+  ): F[WriteGetObjectResponseResponse]
+  def writeGetObjectResponse(
+    a: WriteGetObjectResponseRequest,
+    b: Path
+  ): F[WriteGetObjectResponseResponse]
 
 }

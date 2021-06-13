@@ -19,7 +19,7 @@ object S3Example extends IOApp {
       blocker     <- Blocker[IO]
       credentials = AwsBasicCredentials.create("accesskey", "secretkey")
       port        = 4566
-      s3 <- S3Interpreter[IO](blocker).S3AsyncClientOpResource(
+      s3 <- S3Interpreter[IO].S3AsyncClientOpResource(
              S3AsyncClient
                .builder()
                .credentialsProvider(StaticCredentialsProvider.create(credentials))

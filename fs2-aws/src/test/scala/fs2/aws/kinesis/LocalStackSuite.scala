@@ -7,6 +7,7 @@ import fs2.Stream
 import fs2.aws.internal.KinesisProducerClientImpl
 import fs2.aws.kinesis.consumer.readFromKinesisStream
 import fs2.aws.kinesis.publisher.writeToKinesis
+import org.scalatest.Ignore
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -19,6 +20,7 @@ import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 
 @nowarn
+@Ignore
 class LocalStackSuite extends AnyFlatSpec with Matchers with ScalaFutures {
 
   implicit val ec: ExecutionContext             = ExecutionContext.global

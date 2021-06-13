@@ -1,5 +1,5 @@
 import cats.data.Kleisli
-import cats.effect.{ Blocker, ExitCode, IO, IOApp, Sync }
+import cats.effect.{ ExitCode, IO, IOApp, Sync }
 import cats.implicits._
 import fs2.{ Chunk, Pipe }
 import fs2.aws.dynamodb.StreamScan
@@ -81,8 +81,7 @@ case class DDBEnvironment[F[_]](
 object DynamoParallelScan extends IOApp {
   override def run(args: List[String]): IO[ExitCode] =
     (for {
-      b <- Blocker[IO]
-      ddb <- Interpreter[IO](b)
+      ddb <- Interpreter[IO]
               .DynamoDbAsyncClientOpResource(
                 DynamoDbAsyncClient
                   .builder()

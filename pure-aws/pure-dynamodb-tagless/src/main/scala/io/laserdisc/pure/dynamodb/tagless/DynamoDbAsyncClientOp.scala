@@ -53,7 +53,14 @@ import software.amazon.awssdk.services.dynamodb.model.{
   UpdateTimeToLiveRequest,
   _
 }
-import software.amazon.awssdk.services.dynamodb.paginators._
+import software.amazon.awssdk.services.dynamodb.paginators.{
+  BatchGetItemPublisher,
+  ListContributorInsightsPublisher,
+  ListExportsPublisher,
+  ListTablesPublisher,
+  QueryPublisher,
+  ScanPublisher
+}
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter
 
 trait DynamoDbAsyncClientOp[F[_]] {

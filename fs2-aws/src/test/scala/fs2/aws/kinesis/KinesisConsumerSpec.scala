@@ -9,7 +9,7 @@ import cats.effect.{ ContextShift, IO, Timer }
 import cats.implicits._
 import fs2.aws.kinesis.consumer.{ readFromKinesisStream, _ }
 import org.mockito.Mockito._
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{ BeforeAndAfterEach, Ignore }
 import org.scalatest.concurrent.Eventually
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -31,6 +31,7 @@ import eu.timepit.refined.auto._
 import scala.annotation.nowarn
 
 @nowarn
+@Ignore
 class KinesisConsumerSpec
     extends AnyFlatSpec
     with Matchers
