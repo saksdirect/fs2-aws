@@ -120,8 +120,8 @@ lazy val `fs2-aws-examples` = (project in file("fs2-aws-examples"))
     libraryDependencies ++= Seq(
       "org.mockito"    % "mockito-core"             % V.MockitoCore % Test,
       "org.mockito"    %% "mockito-scala-scalatest" % V.MockitoScalaTest % Test,
-      "ch.qos.logback" % "logback-classic"          % "1.2.3",
-      "ch.qos.logback" % "logback-core"             % "1.2.3",
+      "ch.qos.logback" % "logback-classic"          % "1.2.3" % Optional,
+      "ch.qos.logback" % "logback-core"             % "1.2.3" % Optional,
       "org.slf4j"      % "jcl-over-slf4j"           % "1.7.30",
       "org.slf4j"      % "jul-to-slf4j"             % "1.7.30",
       "org.typelevel"  %% "log4cats-slf4j"          % "2.1.1",
@@ -386,8 +386,8 @@ lazy val `fs2-aws-benchmarks` = (project in file("fs2-aws-benchmarks"))
   .settings(
     name := "fs2-aws-benchmarks",
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "ch.qos.logback" % "logback-core"    % "1.2.3",
+      "ch.qos.logback" % "logback-classic" % "1.2.3" % Optional,
+      "ch.qos.logback" % "logback-core"    % "1.2.3" % Optional,
       "org.slf4j"      % "jcl-over-slf4j"  % "1.7.30",
       "org.slf4j"      % "jul-to-slf4j"    % "1.7.30"
     ),
