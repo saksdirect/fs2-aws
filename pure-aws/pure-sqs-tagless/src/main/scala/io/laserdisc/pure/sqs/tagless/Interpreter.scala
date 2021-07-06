@@ -9,28 +9,7 @@ import java.util.concurrent.CompletionException
 
 // Types referenced
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
-import software.amazon.awssdk.services.sqs.model.{
-  AddPermissionRequest,
-  ChangeMessageVisibilityBatchRequest,
-  ChangeMessageVisibilityRequest,
-  CreateQueueRequest,
-  DeleteMessageBatchRequest,
-  DeleteMessageRequest,
-  DeleteQueueRequest,
-  GetQueueAttributesRequest,
-  GetQueueUrlRequest,
-  ListDeadLetterSourceQueuesRequest,
-  ListQueueTagsRequest,
-  ListQueuesRequest,
-  PurgeQueueRequest,
-  ReceiveMessageRequest,
-  RemovePermissionRequest,
-  SendMessageBatchRequest,
-  SendMessageRequest,
-  SetQueueAttributesRequest,
-  TagQueueRequest,
-  UntagQueueRequest
-}
+import software.amazon.awssdk.services.sqs.model._
 
 import java.util.concurrent.CompletableFuture
 

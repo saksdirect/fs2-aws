@@ -1,37 +1,6 @@
 package io.laserdisc.pure.kinesis.tagless
 
-import software.amazon.awssdk.services.kinesis.model.{
-  AddTagsToStreamRequest,
-  CreateStreamRequest,
-  DecreaseStreamRetentionPeriodRequest,
-  DeleteStreamRequest,
-  DeregisterStreamConsumerRequest,
-  DescribeLimitsRequest,
-  DescribeStreamConsumerRequest,
-  DescribeStreamRequest,
-  DescribeStreamSummaryRequest,
-  DisableEnhancedMonitoringRequest,
-  EnableEnhancedMonitoringRequest,
-  GetRecordsRequest,
-  GetShardIteratorRequest,
-  IncreaseStreamRetentionPeriodRequest,
-  ListShardsRequest,
-  ListStreamConsumersRequest,
-  ListStreamsRequest,
-  ListTagsForStreamRequest,
-  MergeShardsRequest,
-  PutRecordRequest,
-  PutRecordsRequest,
-  RegisterStreamConsumerRequest,
-  RemoveTagsFromStreamRequest,
-  SplitShardRequest,
-  StartStreamEncryptionRequest,
-  StopStreamEncryptionRequest,
-  SubscribeToShardRequest,
-  SubscribeToShardResponseHandler,
-  UpdateShardCountRequest,
-  _
-}
+import software.amazon.awssdk.services.kinesis.model._
 import software.amazon.awssdk.services.kinesis.paginators.ListStreamConsumersPublisher
 import software.amazon.awssdk.services.kinesis.waiters.KinesisAsyncWaiter
 

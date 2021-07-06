@@ -9,44 +9,7 @@ import java.util.concurrent.CompletionException
 
 // Types referenced
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
-import software.amazon.awssdk.services.cloudwatch.model.{
-  DeleteAlarmsRequest,
-  DeleteAnomalyDetectorRequest,
-  DeleteDashboardsRequest,
-  DeleteInsightRulesRequest,
-  DeleteMetricStreamRequest,
-  DescribeAlarmHistoryRequest,
-  DescribeAlarmsForMetricRequest,
-  DescribeAlarmsRequest,
-  DescribeAnomalyDetectorsRequest,
-  DescribeInsightRulesRequest,
-  DisableAlarmActionsRequest,
-  DisableInsightRulesRequest,
-  EnableAlarmActionsRequest,
-  EnableInsightRulesRequest,
-  GetDashboardRequest,
-  GetInsightRuleReportRequest,
-  GetMetricDataRequest,
-  GetMetricStatisticsRequest,
-  GetMetricStreamRequest,
-  GetMetricWidgetImageRequest,
-  ListDashboardsRequest,
-  ListMetricStreamsRequest,
-  ListMetricsRequest,
-  ListTagsForResourceRequest,
-  PutAnomalyDetectorRequest,
-  PutCompositeAlarmRequest,
-  PutDashboardRequest,
-  PutInsightRuleRequest,
-  PutMetricAlarmRequest,
-  PutMetricDataRequest,
-  PutMetricStreamRequest,
-  SetAlarmStateRequest,
-  StartMetricStreamsRequest,
-  StopMetricStreamsRequest,
-  TagResourceRequest,
-  UntagResourceRequest
-}
+import software.amazon.awssdk.services.cloudwatch.model._
 
 import java.util.concurrent.CompletableFuture
 

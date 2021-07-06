@@ -9,37 +9,7 @@ import java.util.concurrent.CompletionException
 
 // Types referenced
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
-import software.amazon.awssdk.services.kinesis.model.{
-  AddTagsToStreamRequest,
-  CreateStreamRequest,
-  DecreaseStreamRetentionPeriodRequest,
-  DeleteStreamRequest,
-  DeregisterStreamConsumerRequest,
-  DescribeLimitsRequest,
-  DescribeStreamConsumerRequest,
-  DescribeStreamRequest,
-  DescribeStreamSummaryRequest,
-  DisableEnhancedMonitoringRequest,
-  EnableEnhancedMonitoringRequest,
-  GetRecordsRequest,
-  GetShardIteratorRequest,
-  IncreaseStreamRetentionPeriodRequest,
-  ListShardsRequest,
-  ListStreamConsumersRequest,
-  ListStreamsRequest,
-  ListTagsForStreamRequest,
-  MergeShardsRequest,
-  PutRecordRequest,
-  PutRecordsRequest,
-  RegisterStreamConsumerRequest,
-  RemoveTagsFromStreamRequest,
-  SplitShardRequest,
-  StartStreamEncryptionRequest,
-  StopStreamEncryptionRequest,
-  SubscribeToShardRequest,
-  SubscribeToShardResponseHandler,
-  UpdateShardCountRequest
-}
+import software.amazon.awssdk.services.kinesis.model._
 
 import java.util.concurrent.CompletableFuture
 

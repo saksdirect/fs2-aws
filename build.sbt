@@ -6,7 +6,6 @@ import TaglessGen.{
   taglessGenSettings
 }
 import sbt.Keys.scalaSource
-import scoverage.ScoverageKeys.coverageMinimum
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.sns.SnsAsyncClient
@@ -17,8 +16,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 organization := "io.laserdisc"
 name         := "fs2-aws"
 
-lazy val scala212 = "2.12.13"
-lazy val scala213 = "2.13.5"
+lazy val scala212 = "2.12.14"
+lazy val scala213 = "2.13.6"
 
 lazy val supportedScalaVersions = List(scala212, scala213)
 
@@ -60,8 +59,8 @@ lazy val `fs2-aws-core` = (project in file("fs2-aws-core"))
       "org.mockito"   %% "mockito-scala-scalatest" % V.MockitoScalaTest % Test,
       "org.scalatest" %% "scalatest"               % V.ScalaTest % Test
     ),
-    coverageMinimum       := 40,
-    coverageFailOnMinimum := true
+    coverageMinimumStmtTotal := 40,
+    coverageFailOnMinimum    := true
   )
   .settings(commonSettings)
   .settings(scalacOptions ++= commonOptions(scalaVersion.value))
@@ -76,8 +75,8 @@ lazy val `fs2-aws-ciris` = (project in file("fs2-aws-ciris"))
       "org.mockito"   %% "mockito-scala-scalatest" % V.MockitoScalaTest % Test,
       "is.cir"        %% "ciris"                   % "1.2.1"
     ),
-    coverageMinimum       := 40,
-    coverageFailOnMinimum := true
+    coverageMinimumStmtTotal := 40,
+    coverageFailOnMinimum    := true
   )
   .settings(commonSettings)
   .settings(scalacOptions ++= commonOptions(scalaVersion.value))
@@ -85,9 +84,9 @@ lazy val `fs2-aws-ciris` = (project in file("fs2-aws-ciris"))
 lazy val `fs2-aws-dynamodb` = (project in file("fs2-aws-dynamodb"))
   .dependsOn(`fs2-aws-core`, `pure-dynamodb-tagless`)
   .settings(
-    name                  := "fs2-aws-dynamodb",
-    coverageMinimum       := 40,
-    coverageFailOnMinimum := true,
+    name                     := "fs2-aws-dynamodb",
+    coverageMinimumStmtTotal := 40,
+    coverageFailOnMinimum    := true,
     libraryDependencies ++= Seq(
       "co.fs2"        %% "fs2-core"                        % V.Fs2,
       "co.fs2"        %% "fs2-io"                          % V.Fs2,
@@ -114,17 +113,17 @@ lazy val `fs2-aws-examples` = (project in file("fs2-aws-examples"))
     `fs2-aws-s3`
   )
   .settings(
-    name            := "fs2-aws-examples",
-    coverageMinimum := 0,
+    name                     := "fs2-aws-examples",
+    coverageMinimumStmtTotal := 0,
     libraryDependencies ++= Seq(
       "org.mockito"    % "mockito-core"             % V.MockitoCore % Test,
       "org.mockito"    %% "mockito-scala-scalatest" % V.MockitoScalaTest % Test,
       "com.amazonaws"  % "aws-java-sdk-sts"         % "1.12.5",
       "ch.qos.logback" % "logback-classic"          % "1.2.3",
       "ch.qos.logback" % "logback-core"             % "1.2.3",
-      "org.slf4j"      % "jcl-over-slf4j"           % "1.7.30",
-      "org.slf4j"      % "jul-to-slf4j"             % "1.7.30",
-      "org.typelevel"  %% "log4cats-slf4j"          % "1.2.2",
+      "org.slf4j"      % "jcl-over-slf4j"           % "1.7.31",
+      "org.slf4j"      % "jul-to-slf4j"             % "1.7.31",
+      "org.typelevel"  %% "log4cats-slf4j"          % "1.3.1",
       "io.laserdisc"   %% "scanamo-circe"           % "1.0.8"
     )
   )
@@ -144,9 +143,9 @@ lazy val `fs2-aws-s3` = (project in file("fs2-aws-s3"))
       "software.amazon.awssdk" % "s3"        % V.AwsSdk,
       "org.scalameta"          %% "munit"    % V.Munit % Test
     ),
-    testFrameworks        += new TestFramework("munit.Framework"),
-    coverageMinimum       := 0,
-    coverageFailOnMinimum := true
+    testFrameworks           += new TestFramework("munit.Framework"),
+    coverageMinimumStmtTotal := 0,
+    coverageFailOnMinimum    := true
   )
   .settings(commonSettings)
   .settings(scalacOptions := commonOptions(scalaVersion.value))
@@ -176,8 +175,8 @@ lazy val `fs2-aws` = (project in file("fs2-aws"))
       "org.slf4j"               % "jcl-over-slf4j"           % "1.7.30" % Test,
       "org.slf4j"               % "jul-to-slf4j"             % "1.7.30" % Test
     ),
-    coverageMinimum       := 40,
-    coverageFailOnMinimum := true
+    coverageMinimumStmtTotal := 40,
+    coverageFailOnMinimum    := true
   )
   .settings(commonSettings)
   .settings(scalacOptions ++= commonOptions(scalaVersion.value))
@@ -194,8 +193,8 @@ lazy val `fs2-aws-sqs` = (project in file("fs2-aws-sqs"))
       "org.mockito"            %% "mockito-scala-scalatest" % V.MockitoScalaTest % Test,
       "eu.timepit"             %% "refined"                 % V.Refined
     ),
-    coverageMinimum       := 55.80,
-    coverageFailOnMinimum := true
+    coverageMinimumStmtTotal := 55.80,
+    coverageFailOnMinimum    := true
   )
   .settings(commonSettings)
   .settings(scalacOptions ++= commonOptions(scalaVersion.value))
@@ -214,8 +213,8 @@ lazy val `fs2-aws-sns` = (project in file("fs2-aws-sns"))
       "software.amazon.awssdk" % "sqs"                      % V.AwsSdk % Test,
       "eu.timepit"             %% "refined"                 % V.Refined
     ),
-    coverageMinimum       := 55.80,
-    coverageFailOnMinimum := true
+    coverageMinimumStmtTotal := 55.80,
+    coverageFailOnMinimum    := true
   )
   .settings(commonSettings)
   .settings(scalacOptions ++= commonOptions(scalaVersion.value))
@@ -327,7 +326,7 @@ lazy val `pure-dynamodb-tagless` = (project in file("pure-aws/pure-dynamodb-tagl
       "org.scalatest"          %% "scalatest"               % V.ScalaTest % Test,
       "org.mockito"            %% "mockito-scala-scalatest" % V.MockitoScalaTest % Test,
       "eu.timepit"             %% "refined"                 % V.Refined,
-      "org.typelevel"          %% "cats-effect"             % "2.5.0"
+      "org.typelevel"          %% "cats-effect"             % V.CE
     ),
     taglessGenDir     := (Compile / scalaSource).value / "io" / "laserdisc" / "pure" / "dynamodb" / "tagless",
     taglessGenPackage := "io.laserdisc.pure.dynamodb.tagless",
@@ -390,8 +389,8 @@ lazy val `fs2-aws-benchmarks` = (project in file("fs2-aws-benchmarks"))
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "ch.qos.logback" % "logback-core"    % "1.2.3",
-      "org.slf4j"      % "jcl-over-slf4j"  % "1.7.30",
-      "org.slf4j"      % "jul-to-slf4j"    % "1.7.30"
+      "org.slf4j"      % "jcl-over-slf4j"  % "1.7.31",
+      "org.slf4j"      % "jul-to-slf4j"    % "1.7.31"
     ),
     publishArtifact := false
   )

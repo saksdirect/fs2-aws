@@ -1,53 +1,7 @@
 package io.laserdisc.pure.cloudwatch.tagless
 
-import software.amazon.awssdk.services.cloudwatch.model.{
-  DeleteAlarmsRequest,
-  DeleteAnomalyDetectorRequest,
-  DeleteDashboardsRequest,
-  DeleteInsightRulesRequest,
-  DeleteMetricStreamRequest,
-  DescribeAlarmHistoryRequest,
-  DescribeAlarmsForMetricRequest,
-  DescribeAlarmsRequest,
-  DescribeAnomalyDetectorsRequest,
-  DescribeInsightRulesRequest,
-  DisableAlarmActionsRequest,
-  DisableInsightRulesRequest,
-  EnableAlarmActionsRequest,
-  EnableInsightRulesRequest,
-  GetDashboardRequest,
-  GetInsightRuleReportRequest,
-  GetMetricDataRequest,
-  GetMetricStatisticsRequest,
-  GetMetricStreamRequest,
-  GetMetricWidgetImageRequest,
-  ListDashboardsRequest,
-  ListMetricStreamsRequest,
-  ListMetricsRequest,
-  ListTagsForResourceRequest,
-  PutAnomalyDetectorRequest,
-  PutCompositeAlarmRequest,
-  PutDashboardRequest,
-  PutInsightRuleRequest,
-  PutMetricAlarmRequest,
-  PutMetricDataRequest,
-  PutMetricStreamRequest,
-  SetAlarmStateRequest,
-  StartMetricStreamsRequest,
-  StopMetricStreamsRequest,
-  TagResourceRequest,
-  UntagResourceRequest,
-  _
-}
-import software.amazon.awssdk.services.cloudwatch.paginators.{
-  DescribeAlarmHistoryPublisher,
-  DescribeAlarmsPublisher,
-  DescribeInsightRulesPublisher,
-  GetMetricDataPublisher,
-  ListDashboardsPublisher,
-  ListMetricStreamsPublisher,
-  ListMetricsPublisher
-}
+import software.amazon.awssdk.services.cloudwatch.model._
+import software.amazon.awssdk.services.cloudwatch.paginators._
 import software.amazon.awssdk.services.cloudwatch.waiters.CloudWatchAsyncWaiter
 
 trait CloudWatchAsyncClientOp[F[_]] {

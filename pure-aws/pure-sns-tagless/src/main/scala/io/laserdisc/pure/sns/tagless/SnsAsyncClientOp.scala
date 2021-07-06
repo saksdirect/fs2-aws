@@ -1,48 +1,7 @@
 package io.laserdisc.pure.sns.tagless
 
-import software.amazon.awssdk.services.sns.model.{
-  AddPermissionRequest,
-  CheckIfPhoneNumberIsOptedOutRequest,
-  ConfirmSubscriptionRequest,
-  CreatePlatformApplicationRequest,
-  CreatePlatformEndpointRequest,
-  CreateTopicRequest,
-  DeleteEndpointRequest,
-  DeletePlatformApplicationRequest,
-  DeleteTopicRequest,
-  GetEndpointAttributesRequest,
-  GetPlatformApplicationAttributesRequest,
-  GetSmsAttributesRequest,
-  GetSubscriptionAttributesRequest,
-  GetTopicAttributesRequest,
-  ListEndpointsByPlatformApplicationRequest,
-  ListPhoneNumbersOptedOutRequest,
-  ListPlatformApplicationsRequest,
-  ListSubscriptionsByTopicRequest,
-  ListSubscriptionsRequest,
-  ListTagsForResourceRequest,
-  ListTopicsRequest,
-  OptInPhoneNumberRequest,
-  PublishRequest,
-  RemovePermissionRequest,
-  SetEndpointAttributesRequest,
-  SetPlatformApplicationAttributesRequest,
-  SetSmsAttributesRequest,
-  SetSubscriptionAttributesRequest,
-  SetTopicAttributesRequest,
-  SubscribeRequest,
-  TagResourceRequest,
-  UnsubscribeRequest,
-  UntagResourceRequest,
-  _
-}
-import software.amazon.awssdk.services.sns.paginators.{
-  ListEndpointsByPlatformApplicationPublisher,
-  ListPlatformApplicationsPublisher,
-  ListSubscriptionsByTopicPublisher,
-  ListSubscriptionsPublisher,
-  ListTopicsPublisher
-}
+import software.amazon.awssdk.services.sns.model._
+import software.amazon.awssdk.services.sns.paginators._
 
 trait SnsAsyncClientOp[F[_]] {
   // SnsAsyncClient
@@ -56,11 +15,17 @@ trait SnsAsyncClientOp[F[_]] {
     a: CreatePlatformApplicationRequest
   ): F[CreatePlatformApplicationResponse]
   def createPlatformEndpoint(a: CreatePlatformEndpointRequest): F[CreatePlatformEndpointResponse]
+  def createSMSSandboxPhoneNumber(
+    a: CreateSmsSandboxPhoneNumberRequest
+  ): F[CreateSmsSandboxPhoneNumberResponse]
   def createTopic(a: CreateTopicRequest): F[CreateTopicResponse]
   def deleteEndpoint(a: DeleteEndpointRequest): F[DeleteEndpointResponse]
   def deletePlatformApplication(
     a: DeletePlatformApplicationRequest
   ): F[DeletePlatformApplicationResponse]
+  def deleteSMSSandboxPhoneNumber(
+    a: DeleteSmsSandboxPhoneNumberRequest
+  ): F[DeleteSmsSandboxPhoneNumberResponse]
   def deleteTopic(a: DeleteTopicRequest): F[DeleteTopicResponse]
   def getEndpointAttributes(a: GetEndpointAttributesRequest): F[GetEndpointAttributesResponse]
   def getPlatformApplicationAttributes(
@@ -68,6 +33,9 @@ trait SnsAsyncClientOp[F[_]] {
   ): F[GetPlatformApplicationAttributesResponse]
   def getSMSAttributes: F[GetSmsAttributesResponse]
   def getSMSAttributes(a: GetSmsAttributesRequest): F[GetSmsAttributesResponse]
+  def getSMSSandboxAccountStatus(
+    a: GetSmsSandboxAccountStatusRequest
+  ): F[GetSmsSandboxAccountStatusResponse]
   def getSubscriptionAttributes(
     a: GetSubscriptionAttributesRequest
   ): F[GetSubscriptionAttributesResponse]
@@ -78,6 +46,10 @@ trait SnsAsyncClientOp[F[_]] {
   def listEndpointsByPlatformApplicationPaginator(
     a: ListEndpointsByPlatformApplicationRequest
   ): F[ListEndpointsByPlatformApplicationPublisher]
+  def listOriginationNumbers(a: ListOriginationNumbersRequest): F[ListOriginationNumbersResponse]
+  def listOriginationNumbersPaginator(
+    a: ListOriginationNumbersRequest
+  ): F[ListOriginationNumbersPublisher]
   def listPhoneNumbersOptedOut: F[ListPhoneNumbersOptedOutResponse]
   def listPhoneNumbersOptedOut(
     a: ListPhoneNumbersOptedOutRequest
@@ -90,6 +62,12 @@ trait SnsAsyncClientOp[F[_]] {
   def listPlatformApplicationsPaginator(
     a: ListPlatformApplicationsRequest
   ): F[ListPlatformApplicationsPublisher]
+  def listSMSSandboxPhoneNumbers(
+    a: ListSmsSandboxPhoneNumbersRequest
+  ): F[ListSmsSandboxPhoneNumbersResponse]
+  def listSMSSandboxPhoneNumbersPaginator(
+    a: ListSmsSandboxPhoneNumbersRequest
+  ): F[ListSMSSandboxPhoneNumbersPublisher]
   def listSubscriptions: F[ListSubscriptionsResponse]
   def listSubscriptions(a: ListSubscriptionsRequest): F[ListSubscriptionsResponse]
   def listSubscriptionsByTopic(
@@ -122,5 +100,8 @@ trait SnsAsyncClientOp[F[_]] {
   def tagResource(a: TagResourceRequest): F[TagResourceResponse]
   def unsubscribe(a: UnsubscribeRequest): F[UnsubscribeResponse]
   def untagResource(a: UntagResourceRequest): F[UntagResourceResponse]
+  def verifySMSSandboxPhoneNumber(
+    a: VerifySmsSandboxPhoneNumberRequest
+  ): F[VerifySmsSandboxPhoneNumberResponse]
 
 }
