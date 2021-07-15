@@ -74,7 +74,7 @@ lazy val `fs2-aws-ciris` = (project in file("fs2-aws-ciris"))
       "org.mockito"             % "mockito-core"             % V.MockitoCore % Test,
       "org.mockito"             %% "mockito-scala-scalatest" % V.MockitoScalaTest % Test,
       "is.cir"                  %% "ciris"                   % "2.0.1",
-      "software.amazon.kinesis" % "amazon-kinesis-client"    % "2.3.5",
+      "software.amazon.kinesis" % "amazon-kinesis-client"    % "2.3.6",
       "org.typelevel"           %% "cats-effect"             % V.CE % Test
     ),
     coverageMinimum       := 40,
@@ -165,7 +165,7 @@ lazy val `fs2-aws-kinesis` = (project in file("fs2-aws-kinesis"))
       "co.fs2"                  %% "fs2-core"                % V.Fs2,
       "co.fs2"                  %% "fs2-io"                  % V.Fs2,
       "com.amazonaws"           % "amazon-kinesis-producer"  % "0.14.7",
-      "software.amazon.kinesis" % "amazon-kinesis-client"    % "2.3.5",
+      "software.amazon.kinesis" % "amazon-kinesis-client"    % "2.3.6",
       "software.amazon.awssdk"  % "sts"                      % V.AwsSdk,
       "eu.timepit"              %% "refined"                 % V.Refined,
       "org.scalatest"           %% "scalatest"               % V.ScalaTest % Test,
