@@ -164,7 +164,7 @@ lazy val `fs2-aws-kinesis` = (project in file("fs2-aws-kinesis"))
     libraryDependencies ++= Seq(
       "co.fs2"                  %% "fs2-core"                % V.Fs2,
       "co.fs2"                  %% "fs2-io"                  % V.Fs2,
-      "com.amazonaws"           % "amazon-kinesis-producer"  % "0.14.7",
+      "com.amazonaws"           % "amazon-kinesis-producer"  % "0.14.8",
       "software.amazon.kinesis" % "amazon-kinesis-client"    % "2.3.5",
       "software.amazon.awssdk"  % "sts"                      % V.AwsSdk,
       "eu.timepit"              %% "refined"                 % V.Refined,
